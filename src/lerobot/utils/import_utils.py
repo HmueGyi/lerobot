@@ -88,16 +88,19 @@ def is_package_available(
         return package_exists
 
 
-def get_safe_default_video_backend():
+def get_safe_default_video_backend() -> Literal["torchcodec", "pyav"]:
     logger = logging.getLogger(__name__)
     if importlib.util.find_spec("torchcodec"):
         # Despite being installed, torchcodec may not be loadable at runtime.
         try:
-            importlib.import_module("torchcodec")
+            # Recent releases import even when FFmpeg fails to load; older ones raise here instead.
+            core = importlib.import_module("torchcodec._core")
+            if getattr(core, "ffmpeg_major_version", True) is None:
+                raise RuntimeError("TorchCodec could not load the FFmpeg libraries.")
             return "torchcodec"
         except (ImportError, OSError, RuntimeError) as e:
             logger.warning(
-                f"{e}\n'torchcodec' is installed but cannot be loaded (see the error above). "
+                f"{e}\n'torchcodec' is installed but cannot decode videos (see the error above). "
                 "Falling back to 'pyav' as a default decoder."
             )
             return "pyav"
@@ -133,6 +136,7 @@ _lancedb_available = is_package_available("lancedb")
 _transformers_available = is_package_available("transformers")
 _peft_available = is_package_available("peft")
 _accelerate_available = is_package_available("accelerate")
+_trackio_available = is_package_available("trackio")
 _scipy_available = is_package_available("scipy")
 _diffusers_available = is_package_available("diffusers")
 _natten_available = is_package_available("natten")
@@ -142,8 +146,7 @@ _kernels_available = is_package_available("kernels")
 # Hardware SDKs
 _serial_available = is_package_available("pyserial", import_name="serial")
 _deepdiff_available = is_package_available("deepdiff")
-_dynamixel_sdk_available = is_package_available("dynamixel-sdk", import_name="dynamixel_sdk")
-_feetech_sdk_available = is_package_available("feetech-servo-sdk", import_name="scservo_sdk")
+_rustypot_available = is_package_available("rustypot")
 _reachy2_sdk_available = is_package_available("reachy2_sdk")
 _can_available = is_package_available("python-can", "can")
 _motorbridge_available = is_package_available("motorbridge")
